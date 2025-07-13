@@ -15,23 +15,25 @@ import java.util.List;
 public class ResizeCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender commandSender, Command command, String s, String[] args) {
-        if (!(commandSender instanceof Player)) {
-            MessageUtils.onOnlyPlayers(commandSender);
-            return true;
+        if (args.length == 0) {
+            MessageUtils.onWrongUsage(commandSender, "/resize <blocks> [player]");
+            return false;
         }
-
-        Player player = (Player) commandSender;
 
         switch (args.length) {
             case 1:
-                return resizeSelf(player, args[0]);
+                if (!(commandSender instanceof Player)) {
+                    MessageUtils.onWrongUsage(commandSender, "Please specify a player to resize.");
+                    return false;
+                }
+                return resizeSelf((Player) commandSender, args[0]);
             case 2:
                 if (args[1].equalsIgnoreCase("all")) {
-                    return resizeAll(player, args[0]);
+                    return resizeAll(commandSender, args[0]);
                 }
-                return resizeOther(player, args[0], args[1]);
+                return resizeOther(commandSender, args[0], args[1]);
             default:
-                MessageUtils.onWrongUsage(player, "/resize <blocks> [player]");
+                MessageUtils.onWrongUsage(commandSender, "/resize <blocks> [player]");
                 return false;
         }
     }
@@ -61,26 +63,26 @@ public class ResizeCommand implements CommandExecutor, TabCompleter {
 
     /**
      * Resize another player
-     * @param player The player resizing the target
+     * @param sender The command sender
      * @param size The size to resize to in blocks
      * @param target The target player to resize
      * @return True if the target was resized, false otherwise
      */
-    private boolean resizeOther(Player player, String size, String target) {
-        if (!player.hasPermission("resizeplayers.scale.others") && !player.isOp()) {
-            MessageUtils.onNoPermission(player, "resizeplayers.scale.others");
+    private boolean resizeOther(CommandSender sender, String size, String target) {
+        if (!sender.hasPermission("resizeplayers.scale.others") && !sender.isOp()) {
+            MessageUtils.onNoPermission(sender, "resizeplayers.scale.others");
             return false;
         }
         Player targetPlayer = Bukkit.getPlayer(target);
         if (targetPlayer == null) {
-            MessageUtils.onPlayerNotFound(player, target);
+            MessageUtils.onPlayerNotFound(sender, target);
             return false;
         }
-        if (targetPlayer.hasPermission("resizeplayers.scale.exempt") && player != targetPlayer) {
-            MessageUtils.onTargetExempt(player, targetPlayer.getName());
+        if (targetPlayer.hasPermission("resizeplayers.scale.exempt") && !sender.equals(targetPlayer)) {
+            MessageUtils.onTargetExempt(sender, targetPlayer.getName());
             return false;
         }
-        double[] sizes = validateAndConvertSize(player, size);
+        double[] sizes = validateAndConvertSize((Player) (sender instanceof Player ? sender : null), size);
         if (sizes == null) {
             return false;
         }
@@ -88,22 +90,22 @@ public class ResizeCommand implements CommandExecutor, TabCompleter {
         double scaleSize = sizes[1];
 
         ScaleUtils.setPlayerScale(targetPlayer, scaleSize, true, true);
-        MessageUtils.onScaledOther(player, blocksSize, targetPlayer.getName());
+        MessageUtils.onScaledOther(sender, blocksSize, targetPlayer.getName());
         return true;
     }
 
     /**
      * Resize all players
-     * @param player The player resizing all players
+     * @param sender The command sender
      * @param size The size to resize to in blocks
      * @return True if all players were resized, false otherwise
      */
-    private boolean resizeAll(Player player, String size) {
-        if (!player.hasPermission("resizeplayers.scale.all") && !player.isOp()) {
-            MessageUtils.onNoPermission(player, "resizeplayers.scale.all");
+    private boolean resizeAll(CommandSender sender, String size) {
+        if (!sender.hasPermission("resizeplayers.scale.all") && !sender.isOp()) {
+            MessageUtils.onNoPermission(sender, "resizeplayers.scale.all");
             return false;
         }
-        double[] sizes = validateAndConvertSize(player, size);
+        double[] sizes = validateAndConvertSize((Player) (sender instanceof Player ? sender : null), size);
         if (sizes == null) {
             return false;
         }
@@ -112,12 +114,12 @@ public class ResizeCommand implements CommandExecutor, TabCompleter {
 
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             if (onlinePlayer.hasPermission("resizeplayers.scale.exempt")) {
-                MessageUtils.onTargetExempt(player, onlinePlayer.getName());
+                MessageUtils.onTargetExempt(sender, onlinePlayer.getName());
                 continue;
             }
             ScaleUtils.setPlayerScale(onlinePlayer, scaleSize, true, true);
         }
-        MessageUtils.onScaledAll(player, blocksSize);
+        MessageUtils.onScaledAll(sender, blocksSize);
         return true;
     }
 
@@ -128,7 +130,7 @@ public class ResizeCommand implements CommandExecutor, TabCompleter {
      * @return The size in blocks and scale if valid, null otherwise
      */
     private double[] validateAndConvertSize(Player player, String size) {
-        if (!ScaleUtils.isValidSize(player, size)) {
+        if (player != null && !ScaleUtils.isValidSize(player, size)) {
             return null;
         }
         double blocksSize;
