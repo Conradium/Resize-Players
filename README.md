@@ -28,3 +28,9 @@ Resize your or other players to your desired height! Allows reach to be affected
 | `%resizeplayers_height%`       | The player's height in blocks.       |
 | `%resizeplayers_block-reach%`  | The player's block reach in blocks.  |
 | `%resizeplayers_entity-reach%` | The player's entity reach in blocks. |
+
+## About this fork
+
+This fork is based on [Sfg246/Resize-Players](https://github.com/Sfg246/Resize-Players) and adds one change:
+
+- **Console support for `/resize`.** `/resize <blocks> <player>` and `/resize <blocks> all` can now be run from the server console, command blocks, or other plugins, so you can script player sizes (for example, from an event or rank-up plugin). `/resize <blocks>` with no target still needs to be run by a player.
